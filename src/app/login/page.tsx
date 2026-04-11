@@ -111,7 +111,7 @@ function LoginPageInner() {
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
               <Heart className="w-5 h-5 text-white" />
             </div>
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">Wafa<span className="text-blue-500">Health</span></span>
+            <span className="text-2xl font-bold text-slate-900 dark:text-white">medi<span className="text-blue-500">GO</span></span>
           </Link>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
             {step === 'phone' ? 'Login to your account' : 'Verify your number'}

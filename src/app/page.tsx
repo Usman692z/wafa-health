@@ -96,7 +96,7 @@ export default function HomePage() {
                 <Heart className="w-4 h-4 text-white" />
               </div>
               <span className="text-xl font-bold text-slate-900 dark:text-white">
-                Wafa<span className="text-blue-500">Health</span>
+                medi<span className="text-blue-500">GO</span>
               </span>
             </div>
             <div className="hidden md:flex items-center gap-6">
@@ -171,7 +171,7 @@ export default function HomePage() {
       {/* Features */}
       <section id="features" className="py-16 bg-white dark:bg-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-4">Why Choose Wafa Health?</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-center text-slate-900 dark:text-white mb-4">Why Choose mediGO?</h2>
           <p className="text-center text-slate-500 dark:text-slate-400 mb-12">Built for Pakistan. Optimized for every internet condition.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f) => (
@@ -191,7 +191,7 @@ export default function HomePage() {
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-3xl p-12 text-white">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Start Your Health Journey Today</h2>
-          <p className="text-blue-100 text-lg mb-8 max-w-xl mx-auto">Join 50,000+ patients who trust Wafa Health for their medical needs.</p>
+          <p className="text-blue-100 text-lg mb-8 max-w-xl mx-auto">Join 50,000+ patients who trust mediGO for their medical needs.</p>
           <Link href="/register" className="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-600 font-semibold rounded-2xl hover:bg-blue-50 shadow-lg">
             Create Free Account <ChevronRight className="w-5 h-5" />
           </Link>
@@ -206,9 +206,9 @@ export default function HomePage() {
               <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
                 <Heart className="w-3 h-3 text-white" />
               </div>
-              <span className="text-white font-bold">WafaHealth</span>
+              <span className="text-white font-bold">mediGO</span>
             </div>
-            <p className="text-sm">© 2024 Wafa Health. All rights reserved. | Pakistan</p>
+            <p className="text-sm">© 2024 mediGO. All rights reserved. | Pakistan</p>
             <div className="flex gap-4 text-sm">
               <a href="#" className="hover:text-white">Privacy</a>
               <a href="#" className="hover:text-white">Terms</a>

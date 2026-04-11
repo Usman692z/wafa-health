@@ -153,7 +153,7 @@ export default function DoctorEarningsPage() {
       {/* Commission Note */}
       <div className="bg-blue-50 dark:bg-blue-950/30 rounded-2xl p-4 text-sm text-blue-700 dark:text-blue-400">
         <p className="font-semibold mb-1">Commission Policy</p>
-        <p>WafaHealth charges 10% platform fee on each consultation. Your earnings are 90% of the consultation fee. Payments are released after admin verification.</p>
+        <p>mediGO charges 10% platform fee on each consultation. Your earnings are 90% of the consultation fee. Payments are released after admin verification.</p>
       </div>
     </div>
   );

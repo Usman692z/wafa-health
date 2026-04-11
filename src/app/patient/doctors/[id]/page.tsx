@@ -340,7 +340,7 @@ export default function DoctorProfilePage() {
                   <div>
                     <p className="text-xs text-slate-500 mb-2">
                       Transfer {formatPKR(doctor.consultationFee)} to account:
-                      <br /><strong className="text-slate-900 dark:text-white">Wafa Health • 0321-1234567</strong>
+                      <br /><strong className="text-slate-900 dark:text-white">mediGO • 0321-1234567</strong>
                     </p>
                     <label className="flex flex-col items-center gap-2 p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer hover:border-blue-400 transition-colors">
                       <Upload className="w-5 h-5 text-slate-400" />

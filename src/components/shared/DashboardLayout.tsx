@@ -73,7 +73,7 @@ export function DashboardLayout({ children, navItems, title }: DashboardLayoutPr
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
               <Heart className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-slate-900 dark:text-white">Wafa<span className="text-blue-500">Health</span></span>
+            <span className="text-lg font-bold text-slate-900 dark:text-white">medi<span className="text-blue-500">GO</span></span>
           </Link>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-slate-600">
             <X className="w-5 h-5" />

@@ -18,12 +18,12 @@ export async function generatePrescriptionPDF(prescription: Prescription): Promi
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('WafaHealth', margin, 15);
+  doc.text('mediGO', margin, 15);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text('Telemedicine Platform | Pakistan', margin, 22);
-  doc.text('www.wafahealth.pk | 0300-WAFA-123', margin, 28);
+  doc.text('www.medigo.pk | 0300-MEDI-456', margin, 28);
 
   y = 45;
 
@@ -193,7 +193,7 @@ export async function generatePrescriptionPDF(prescription: Prescription): Promi
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(255, 255, 255);
-  const footerText = 'This is a digitally generated prescription from WafaHealth. Valid only when signed by the doctor. For emergencies, call 1122.';
+  const footerText = 'This is a digitally generated prescription from mediGO. Valid only when signed by the doctor. For emergencies, call 1122.';
   doc.text(footerText, pageWidth / 2, pageHeight - 7, { align: 'center' });
 
   // Save

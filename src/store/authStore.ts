@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () => set({ firebaseUser: null, profile: null, isLoading: false }),
     }),
     {
-      name: 'wafa-auth',
+      name: 'medigo-auth',
       partialize: (state) => ({ profile: state.profile }),
     }
   )

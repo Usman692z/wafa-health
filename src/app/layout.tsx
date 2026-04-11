@@ -6,15 +6,15 @@ import { Providers } from './providers';
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'Wafa Health – Telemedicine Platform Pakistan',
+  title: 'mediGO – Telemedicine Platform Pakistan',
   description:
     'Connect with certified doctors online. Book consultations, chat, video calls, and get e-prescriptions. Supporting JazzCash and Easypaisa.',
   keywords: ['telemedicine', 'Pakistan', 'doctor', 'online consultation', 'health', 'sehat'],
-  authors: [{ name: 'Wafa Health' }],
+  authors: [{ name: 'mediGO' }],
   manifest: '/manifest.json',
   icons: { icon: '/favicon.ico', apple: '/apple-touch-icon.png' },
   openGraph: {
-    title: 'Wafa Health – Telemedicine Pakistan',
+    title: 'mediGO – Telemedicine Pakistan',
     description: 'Online doctor consultations made simple.',
     type: 'website',
     locale: 'en_PK',
