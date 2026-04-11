@@ -74,12 +74,8 @@ export default function DoctorProfilePage() {
       }
 
       const chatRoomId = await createChatRoom({
-        appointmentId: '',
-        participants: [patientProfile.uid, doctor.uid],
-        isActive: true,
-        lastMessage: undefined,
-        lastMessageAt: undefined,
-        lastMessageBy: undefined,
+        patientId: patientProfile.uid,
+        doctorId: doctor.uid,
       });
 
       const appointmentId = await createAppointment({
