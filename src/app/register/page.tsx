@@ -57,8 +57,10 @@ function RegisterPageInner() {
       toast.success(`Welcome to mediGO, ${profile.name}! Please verify your email.`);
       router.push('/patient/dashboard');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('Registration error:', msg);
+      const msg = err instanceof Error ? err.message
+        : (err && typeof err === 'object' && 'message' in err) ? String((err as Record<string,unknown>).message)
+        : String(err);
+      console.error('Registration error:', err);
       if (msg.includes('email-already-in-use')) {
         toast.error('An account with this email already exists.');
       } else if (msg.includes('operation-not-allowed')) {
