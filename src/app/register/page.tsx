@@ -20,7 +20,7 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
   city: z.string().min(1, 'Select your city'),
-  gender: z.enum(['male', 'female', 'other'], { required_error: 'Select your gender' }),
+  gender: z.enum(['male', 'female', 'other']).refine(v => !!v, 'Select your gender'),
 }).refine((d) => d.password === d.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
