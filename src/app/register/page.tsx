@@ -57,11 +57,16 @@ function RegisterPageInner() {
       toast.success(`Welcome to mediGO, ${profile.name}! Please verify your email.`);
       router.push('/patient/dashboard');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '';
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Registration error:', msg);
       if (msg.includes('email-already-in-use')) {
         toast.error('An account with this email already exists.');
+      } else if (msg.includes('operation-not-allowed')) {
+        toast.error('Email sign-up is not enabled. Contact support.');
+      } else if (msg.includes('weak-password')) {
+        toast.error('Password is too weak. Use at least 6 characters.');
       } else {
-        toast.error('Registration failed. Please try again.');
+        toast.error(msg || 'Registration failed. Please try again.');
       }
     } finally {
       setLoading(false);
