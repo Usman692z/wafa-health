@@ -1,146 +1,74 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
-import { Heart, Phone, User, Stethoscope, Loader2, Shield, Upload, ArrowRight } from 'lucide-react';
-import { sendOTP, verifyOTP, getOrCreateProfile } from '@/lib/auth';
+import { Heart, Mail, Lock, User, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { registerWithEmail, getOrCreateProfile } from '@/lib/auth';
 import { useAuthStore } from '@/store/authStore';
-import { formatPhonePK, isValidPKPhone } from '@/lib/utils';
-
-const SPECIALIZATIONS = [
-  'General Physician', 'Cardiologist', 'Dermatologist', 'Pediatrician',
-  'Gynecologist / Obstetrician', 'Neurologist', 'Orthopedic Surgeon', 'Psychiatrist',
-  'ENT Specialist', 'Ophthalmologist', 'Urologist', 'Gastroenterologist',
-  'Pulmonologist', 'Endocrinologist', 'Nephrologist', 'Oncologist',
-  'Rheumatologist', 'Hematologist', 'Infectious Disease', 'Radiologist',
-  'Anesthesiologist', 'Plastic Surgeon', 'Vascular Surgeon', 'Dentist',
-  'Nutritionist / Dietitian', 'Physiotherapist', 'Sexologist', 'Homeopathic',
-];
 
 const CITIES = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan',
   'Peshawar', 'Quetta', 'Sialkot', 'Gujranwala', 'Hyderabad', 'Bahawalpur', 'Abbottabad', 'Other'];
 
-const patientSchema = z.object({
+const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().refine(isValidPKPhone, 'Invalid Pakistani number'),
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string(),
   city: z.string().min(1, 'Select your city'),
-  gender: z.enum(['male', 'female', 'other']),
-  otp: z.string().length(6, '6-digit OTP required').optional(),
+  gender: z.enum(['male', 'female', 'other'], { required_error: 'Select your gender' }),
+}).refine((d) => d.password === d.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
 });
 
-const doctorSchema = z.object({
-  name: z.string().min(2, 'Name required'),
-  phone: z.string().refine(isValidPKPhone, 'Invalid Pakistani number'),
-  pmdcNumber: z.string().min(4, 'PMDC/PMC number required'),
-  specialization: z.string().min(1, 'Select specialization'),
-  experience: z.string().transform(v => Number(v)),
-  consultationFee: z.string().transform(v => Number(v)),
-  city: z.string().min(1, 'Select your city'),
-  qualifications: z.string().min(2, 'Add qualifications e.g. MBBS, MD'),
-  about: z.string().max(500).optional(),
-  otp: z.string().length(6, '6-digit OTP required').optional(),
-});
+type RegisterForm = z.infer<typeof registerSchema>;
 
-type PatientForm = z.infer<typeof patientSchema>;
-type DoctorForm = z.infer<typeof doctorSchema>;
+const inputClass = 'w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
 
 function RegisterPageInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const defaultRole = (searchParams.get('role') as 'patient' | 'doctor') || 'patient';
-
-  const [role, setRole] = useState<'patient' | 'doctor'>(defaultRole);
-  const [step, setStep] = useState<'info' | 'otp'>('info');
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<Partial<PatientForm & DoctorForm>>({});
-  const [resendTimer, setResendTimer] = useState(0);
-
+  const [showPassword, setShowPassword] = useState(false);
   const { setFirebaseUser, setProfile } = useAuthStore();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const patientForm = useForm<PatientForm>({ resolver: zodResolver(patientSchema) as any });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const doctorForm = useForm<DoctorForm>({ resolver: zodResolver(doctorSchema) as any });
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+  });
 
-  const form = role === 'patient' ? patientForm : doctorForm;
-
-  async function handleInfoSubmit(data: PatientForm | DoctorForm) {
+  async function onSubmit(data: RegisterForm) {
     setLoading(true);
     try {
-      const formatted = formatPhonePK(data.phone);
-      await sendOTP(formatted);
-      setFormData({ ...data, phone: formatted });
-      setStep('otp');
-      setResendTimer(60);
-      toast.success('OTP sent to your number!');
-    } catch (err: unknown) {
-      toast.error('Failed to send OTP. Check the phone number.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleOTPSubmit(otp: string) {
-    setLoading(true);
-    try {
-      const user = await verifyOTP(otp);
-      const additionalData: Record<string, unknown> = {
-        name: formData.name,
-        phone: formData.phone,
-      };
-
-      if (role === 'patient') {
-        additionalData.city = (formData as PatientForm).city;
-        additionalData.gender = (formData as PatientForm).gender;
-      } else {
-        const d = formData as DoctorForm;
-        additionalData.pmdcNumber = d.pmdcNumber;
-        additionalData.specialization = d.specialization;
-        additionalData.experience = d.experience;
-        additionalData.consultationFee = d.consultationFee;
-        additionalData.city = d.city;
-        additionalData.qualifications = d.qualifications.split(',').map((q) => q.trim());
-        additionalData.about = d.about || '';
-        additionalData.isApproved = false;
-        additionalData.isOnline = false;
-        additionalData.rating = 0;
-        additionalData.totalReviews = 0;
-        additionalData.totalConsultations = 0;
-        additionalData.earnings = 0;
-        additionalData.availability = [];
-        additionalData.languages = ['Urdu', 'English'];
-      }
-
-      const profile = await getOrCreateProfile(user, role, additionalData as never);
+      const user = await registerWithEmail(data.email, data.password);
+      const profile = await getOrCreateProfile(user, 'patient', {
+        name: data.name,
+        email: data.email,
+        city: data.city,
+        gender: data.gender,
+      } as never);
       setFirebaseUser(user);
       setProfile(profile);
-
-      if (role === 'doctor') {
-        toast.success('Registration successful! Your profile is under review by admin.', { duration: 5000 });
-        router.push('/doctor/dashboard');
-      } else {
-        toast.success(`Welcome to mediGO, ${profile.name}!`);
-        router.push('/patient/dashboard');
-      }
+      toast.success(`Welcome to mediGO, ${profile.name}! Please verify your email.`);
+      router.push('/patient/dashboard');
     } catch (err: unknown) {
-      toast.error('Invalid OTP. Please try again.');
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('email-already-in-use')) {
+        toast.error('An account with this email already exists.');
+      } else {
+        toast.error('Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   }
-
-  const [otpValue, setOtpValue] = useState('');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-4">
-      <div id="recaptcha-container" />
-
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-6">
           <Link href="/" className="inline-flex items-center gap-2 mb-3">
@@ -149,138 +77,85 @@ function RegisterPageInner() {
             </div>
             <span className="text-2xl font-bold text-slate-900 dark:text-white">medi<span className="text-blue-500">GO</span></span>
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-            {step === 'info' ? 'Create your account' : 'Verify your number'}
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create patient account</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Are you a doctor? Contact admin to get access.</p>
         </div>
 
-        {/* Role Switcher */}
-        {step === 'info' && (
-          <div className="flex p-1 bg-slate-100 dark:bg-slate-700 rounded-2xl mb-6">
-            <button
-              onClick={() => setRole('patient')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${role === 'patient' ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <User className="w-4 h-4" /> Patient
-            </button>
-            <button
-              onClick={() => setRole('doctor')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${role === 'doctor' ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              <Stethoscope className="w-4 h-4" /> Doctor
-            </button>
-          </div>
-        )}
-
         <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700 p-8">
-          {step === 'info' ? (
-            role === 'patient' ? (
-              <form onSubmit={patientForm.handleSubmit(handleInfoSubmit)} className="space-y-4">
-                <Field label="Full Name" error={patientForm.formState.errors.name?.message}>
-                  <input {...patientForm.register('name')} placeholder="e.g. Ahmed Ali" className={inputClass} />
-                </Field>
-                <Field label="Mobile Number" error={patientForm.formState.errors.phone?.message}>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-500 text-sm">
-                      🇵🇰 +92 <span className="w-px h-4 bg-slate-300 dark:bg-slate-600" />
-                    </div>
-                    <input {...patientForm.register('phone')} type="tel" placeholder="3XX XXXXXXX" className={`${inputClass} pl-20`} />
-                  </div>
-                </Field>
-                <Field label="City" error={patientForm.formState.errors.city?.message}>
-                  <select {...patientForm.register('city')} className={inputClass}>
-                    <option value="">Select City</option>
-                    {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </Field>
-                <Field label="Gender" error={patientForm.formState.errors.gender?.message}>
-                  <select {...patientForm.register('gender')} className={inputClass}>
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </Field>
-                <SubmitBtn loading={loading} label="Send OTP & Continue" />
-              </form>
-            ) : (
-              <form onSubmit={doctorForm.handleSubmit(handleInfoSubmit as never)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Full Name" error={doctorForm.formState.errors.name?.message} className="col-span-2">
-                    <input {...doctorForm.register('name')} placeholder="Dr. Ahmed Ali" className={inputClass} />
-                  </Field>
-                  <Field label="Mobile Number" error={doctorForm.formState.errors.phone?.message} className="col-span-2">
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-slate-500 text-sm">
-                        🇵🇰 +92 <span className="w-px h-4 bg-slate-300 dark:bg-slate-600" />
-                      </div>
-                      <input {...doctorForm.register('phone')} type="tel" placeholder="3XX XXXXXXX" className={`${inputClass} pl-20`} />
-                    </div>
-                  </Field>
-                  <Field label="PMDC/PMC Number" error={doctorForm.formState.errors.pmdcNumber?.message}>
-                    <input {...doctorForm.register('pmdcNumber')} placeholder="e.g. 12345-P" className={inputClass} />
-                  </Field>
-                  <Field label="Experience (Years)" error={doctorForm.formState.errors.experience?.message}>
-                    <input {...doctorForm.register('experience')} type="number" placeholder="5" className={inputClass} />
-                  </Field>
-                  <Field label="Specialization" error={doctorForm.formState.errors.specialization?.message}>
-                    <select {...doctorForm.register('specialization')} className={inputClass}>
-                      <option value="">Select</option>
-                      {SPECIALIZATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Consultation Fee (PKR)" error={doctorForm.formState.errors.consultationFee?.message}>
-                    <input {...doctorForm.register('consultationFee')} type="number" placeholder="500" className={inputClass} />
-                  </Field>
-                  <Field label="City" error={doctorForm.formState.errors.city?.message}>
-                    <select {...doctorForm.register('city')} className={inputClass}>
-                      <option value="">Select City</option>
-                      {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Qualifications" error={doctorForm.formState.errors.qualifications?.message}>
-                    <input {...doctorForm.register('qualifications')} placeholder="MBBS, FCPS" className={inputClass} />
-                  </Field>
-                  <Field label="About (Optional)" className="col-span-2">
-                    <textarea {...doctorForm.register('about')} placeholder="Brief description..." rows={2} className={`${inputClass} resize-none`} />
-                  </Field>
-                </div>
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-xs">
-                  <Shield className="w-4 h-4 shrink-0 mt-0.5" />
-                  Your PMDC/PMC number will be verified. Profile requires admin approval before going live.
-                </div>
-                <SubmitBtn loading={loading} label="Send OTP & Continue" />
-              </form>
-            )
-          ) : (
-            <div className="space-y-5">
-              <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-                OTP sent to <strong className="text-slate-900 dark:text-white">{formData.phone}</strong>
-              </p>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Enter 6-digit OTP</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={otpValue}
-                  onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
-                  placeholder="● ● ● ● ● ●"
-                  className="w-full px-4 py-4 rounded-2xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-center text-2xl font-bold tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input {...register('name')} placeholder="Ahmed Ali" className={`${inputClass} pl-10`} />
               </div>
-              <button
-                onClick={() => handleOTPSubmit(otpValue)}
-                disabled={loading || otpValue.length !== 6}
-                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold rounded-2xl hover:from-blue-600 hover:to-cyan-600 disabled:opacity-60 shadow-lg"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Complete Registration <ArrowRight className="w-5 h-5" /></>}
-              </button>
-              <button onClick={() => setStep('info')} className="w-full text-center text-sm text-slate-500 hover:text-blue-500">
-                ← Go back
-              </button>
+              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
             </div>
-          )}
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input {...register('email')} type="email" placeholder="you@example.com" autoComplete="email" className={`${inputClass} pl-10`} />
+              </div>
+              {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input {...register('password')} type={showPassword ? 'text' : 'password'} placeholder="Min 6 characters" autoComplete="new-password" className={`${inputClass} pl-10 pr-10`} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input {...register('confirmPassword')} type={showPassword ? 'text' : 'password'} placeholder="Repeat password" autoComplete="new-password" className={`${inputClass} pl-10`} />
+              </div>
+              {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>}
+            </div>
+
+            {/* City & Gender */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">City</label>
+                <select {...register('city')} className={inputClass}>
+                  <option value="">Select City</option>
+                  {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {errors.city && <p className="mt-1 text-xs text-red-500">{errors.city.message}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Gender</label>
+                <select {...register('gender')} className={inputClass}>
+                  <option value="">Select</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+                {errors.gender && <p className="mt-1 text-xs text-red-500">{errors.gender.message}</p>}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold rounded-2xl hover:from-blue-600 hover:to-cyan-600 disabled:opacity-60 shadow-lg mt-2"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Create Account <ArrowRight className="w-5 h-5" /></>}
+            </button>
+          </form>
         </div>
 
         <p className="text-center text-sm text-slate-500 mt-6">
@@ -289,30 +164,6 @@ function RegisterPageInner() {
         </p>
       </div>
     </div>
-  );
-}
-
-const inputClass = 'w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
-
-function Field({ label, error, children, className = '' }: { label: string; error?: string; children: React.ReactNode; className?: string }) {
-  return (
-    <div className={className}>
-      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{label}</label>
-      {children}
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
-    </div>
-  );
-}
-
-function SubmitBtn({ loading, label }: { loading: boolean; label: string }) {
-  return (
-    <button
-      type="submit"
-      disabled={loading}
-      className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-semibold rounded-2xl hover:from-blue-600 hover:to-cyan-600 disabled:opacity-60 shadow-lg mt-2"
-    >
-      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>{label} <ArrowRight className="w-5 h-5" /></>}
-    </button>
   );
 }
 

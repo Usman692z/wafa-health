@@ -1,44 +1,45 @@
 import {
-  signInWithPhoneNumber,
-  RecaptchaVerifier,
-  ConfirmationResult,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
   signOut,
   onAuthStateChanged,
   User,
 } from 'firebase/auth';
-import { auth } from './firebase';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { auth, firebaseConfig } from './firebase';
 import { getUserProfile, createUserProfile } from './firestore';
 import type { UserProfile } from '@/types';
 
-let confirmationResult: ConfirmationResult | null = null;
-let recaptchaVerifier: RecaptchaVerifier | null = null;
-
-// ─── Setup invisible reCAPTCHA ────────────────────────────────
-export function setupRecaptcha(containerId: string): RecaptchaVerifier {
-  if (recaptchaVerifier) {
-    recaptchaVerifier.clear();
-  }
-  recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-    size: 'invisible',
-    callback: () => {},
-    'expired-callback': () => {
-      recaptchaVerifier = null;
-    },
-  });
-  return recaptchaVerifier;
-}
-
-// ─── Send OTP ─────────────────────────────────────────────────
-export async function sendOTP(phone: string, containerId = 'recaptcha-container'): Promise<void> {
-  const verifier = setupRecaptcha(containerId);
-  confirmationResult = await signInWithPhoneNumber(auth, phone, verifier);
-}
-
-// ─── Verify OTP ──────────────────────────────────────────────
-export async function verifyOTP(code: string): Promise<User> {
-  if (!confirmationResult) throw new Error('No OTP request found. Please request OTP first.');
-  const result = await confirmationResult.confirm(code);
+// ─── Login ────────────────────────────────────────────────────
+export async function loginWithEmail(email: string, password: string): Promise<User> {
+  const result = await signInWithEmailAndPassword(auth, email, password);
   return result.user;
+}
+
+// ─── Patient Register ─────────────────────────────────────────
+export async function registerWithEmail(email: string, password: string): Promise<User> {
+  const result = await createUserWithEmailAndPassword(auth, email, password);
+  await sendEmailVerification(result.user);
+  return result.user;
+}
+
+// ─── Admin creates doctor (secondary app so admin stays signed in) ──
+export async function createDoctorAccount(email: string, tempPassword: string): Promise<string> {
+  const secondaryApp = initializeApp(firebaseConfig, `doctor-create-${Date.now()}`);
+  const secondaryAuth = getAuth(secondaryApp);
+  try {
+    const result = await createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
+    const uid = result.user.uid;
+    await sendPasswordResetEmail(secondaryAuth, email);
+    await deleteApp(secondaryApp);
+    return uid;
+  } catch (err) {
+    await deleteApp(secondaryApp);
+    throw err;
+  }
 }
 
 // ─── Sign Out ────────────────────────────────────────────────
@@ -51,7 +52,7 @@ export function onAuthChange(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback);
 }
 
-// ─── Get or create profile ───────────────────────────────────
+// ─── Get or create profile after registration ─────────────────
 export async function getOrCreateProfile(
   user: User,
   role: 'patient' | 'doctor',
@@ -62,7 +63,8 @@ export async function getOrCreateProfile(
   if (!profile) {
     const base = {
       uid: user.uid,
-      phone: user.phoneNumber || '',
+      email: user.email || '',
+      phone: '',
       role,
       isBlocked: false,
       preferredLanguage: 'en' as const,

@@ -2,14 +2,29 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getDoctors, approveDoctor, rejectDoctor, updateUserProfile } from '@/lib/firestore';
+import { getDoctors, approveDoctor, rejectDoctor, updateUserProfile, createUserProfile } from '@/lib/firestore';
+import { createDoctorAccount } from '@/lib/auth';
 import { useAuthStore } from '@/store/authStore';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { formatDate, formatPKR } from '@/lib/utils';
-import { Search, Check, X, Eye, Shield, MapPin, Star, Loader2 } from 'lucide-react';
+import { Search, Check, X, Eye, Shield, MapPin, Star, Loader2, UserPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { DoctorProfile } from '@/types';
+
+const SPECIALIZATIONS = [
+  'General Physician', 'Cardiologist', 'Dermatologist', 'Pediatrician',
+  'Gynecologist / Obstetrician', 'Neurologist', 'Orthopedic Surgeon', 'Psychiatrist',
+  'ENT Specialist', 'Ophthalmologist', 'Urologist', 'Gastroenterologist',
+  'Pulmonologist', 'Endocrinologist', 'Nephrologist', 'Oncologist',
+  'Rheumatologist', 'Hematologist', 'Infectious Disease', 'Radiologist',
+  'Anesthesiologist', 'Plastic Surgeon', 'Vascular Surgeon', 'Dentist',
+  'Nutritionist / Dietitian', 'Physiotherapist', 'Sexologist', 'Homeopathic',
+];
+const CITIES = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Multan',
+  'Peshawar', 'Quetta', 'Sialkot', 'Gujranwala', 'Hyderabad', 'Bahawalpur', 'Abbottabad', 'Other'];
+
+const inputClass = 'w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
 
 function AdminDoctorsPageInner() {
   const { profile } = useAuthStore();
@@ -22,6 +37,12 @@ function AdminDoctorsPageInner() {
   const [rejectModal, setRejectModal] = useState<{ id: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [viewDoctor, setViewDoctor] = useState<DoctorProfile | null>(null);
+  const [createModal, setCreateModal] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: '', email: '', pmdcNumber: '', specialization: '', experience: '',
+    consultationFee: '', city: '', qualifications: '', about: '',
+  });
 
   useEffect(() => {
     getDoctors().then((data) => {
@@ -70,6 +91,57 @@ function AdminDoctorsPageInner() {
     }
   }
 
+  async function handleCreateDoctor() {
+    if (!createForm.name || !createForm.email || !createForm.pmdcNumber || !createForm.specialization) {
+      toast.error('Fill in all required fields.');
+      return;
+    }
+    setCreateLoading(true);
+    try {
+      const tempPassword = Math.random().toString(36).slice(-10) + 'A1!';
+      const uid = await createDoctorAccount(createForm.email, tempPassword);
+      await createUserProfile({
+        uid,
+        name: createForm.name,
+        email: createForm.email,
+        phone: '',
+        role: 'doctor',
+        isBlocked: false,
+        preferredLanguage: 'en',
+        pmdcNumber: createForm.pmdcNumber,
+        specialization: createForm.specialization,
+        experience: Number(createForm.experience) || 0,
+        consultationFee: Number(createForm.consultationFee) || 0,
+        city: createForm.city,
+        qualifications: createForm.qualifications.split(',').map((q) => q.trim()).filter(Boolean),
+        about: createForm.about || '',
+        isApproved: true,
+        isOnline: false,
+        rating: 0,
+        totalReviews: 0,
+        totalConsultations: 0,
+        earnings: 0,
+        availability: [],
+        languages: ['Urdu', 'English'],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
+      toast.success(`Doctor account created! Password reset email sent to ${createForm.email}`);
+      setCreateModal(false);
+      setCreateForm({ name: '', email: '', pmdcNumber: '', specialization: '', experience: '', consultationFee: '', city: '', qualifications: '', about: '' });
+      getDoctors().then(setDoctors);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('email-already-in-use')) {
+        toast.error('An account with this email already exists.');
+      } else {
+        toast.error('Failed to create doctor account.');
+      }
+    } finally {
+      setCreateLoading(false);
+    }
+  }
+
   async function handleBlock(uid: string, isBlocked: boolean) {
     setActionId(uid);
     try {
@@ -92,7 +164,15 @@ function AdminDoctorsPageInner() {
 
   return (
     <div className="max-w-6xl space-y-5">
-      <h2 className="text-lg font-bold text-slate-900 dark:text-white">Doctor Management</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Doctor Management</h2>
+        <button
+          onClick={() => setCreateModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-2xl text-sm font-medium hover:bg-blue-600 transition-colors shadow-sm"
+        >
+          <UserPlus className="w-4 h-4" /> Add Doctor
+        </button>
+      </div>
 
       <div className="flex gap-3 flex-wrap">
         <div className="flex-1 min-w-48 relative">
@@ -218,6 +298,77 @@ function AdminDoctorsPageInner() {
                 <p className="text-sm text-slate-700 dark:text-slate-300">{viewDoctor.about}</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Create Doctor Modal */}
+      {createModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white">Create Doctor Account</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Doctor will receive an email to set their password</p>
+              </div>
+              <button onClick={() => setCreateModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Full Name *</label>
+                  <input value={createForm.name} onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))} placeholder="Dr. Ahmed Ali" className={inputClass} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Email *</label>
+                  <input value={createForm.email} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} type="email" placeholder="doctor@example.com" className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">PMDC/PMC Number *</label>
+                  <input value={createForm.pmdcNumber} onChange={e => setCreateForm(f => ({ ...f, pmdcNumber: e.target.value }))} placeholder="12345-P" className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Specialization *</label>
+                  <select value={createForm.specialization} onChange={e => setCreateForm(f => ({ ...f, specialization: e.target.value }))} className={inputClass}>
+                    <option value="">Select</option>
+                    {SPECIALIZATIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Experience (years)</label>
+                  <input value={createForm.experience} onChange={e => setCreateForm(f => ({ ...f, experience: e.target.value }))} type="number" placeholder="5" className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Consultation Fee (PKR)</label>
+                  <input value={createForm.consultationFee} onChange={e => setCreateForm(f => ({ ...f, consultationFee: e.target.value }))} type="number" placeholder="500" className={inputClass} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">City</label>
+                  <select value={createForm.city} onChange={e => setCreateForm(f => ({ ...f, city: e.target.value }))} className={inputClass}>
+                    <option value="">Select City</option>
+                    {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Qualifications (comma separated)</label>
+                  <input value={createForm.qualifications} onChange={e => setCreateForm(f => ({ ...f, qualifications: e.target.value }))} placeholder="MBBS, FCPS" className={inputClass} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">About (optional)</label>
+                  <textarea value={createForm.about} onChange={e => setCreateForm(f => ({ ...f, about: e.target.value }))} placeholder="Brief description..." rows={2} className={`${inputClass} resize-none`} />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-2">
+                <button onClick={() => setCreateModal(false)} className="flex-1 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-600 dark:text-slate-400">Cancel</button>
+                <button
+                  onClick={handleCreateDoctor}
+                  disabled={createLoading}
+                  className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-medium hover:bg-blue-600 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {createLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create & Send Email'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
