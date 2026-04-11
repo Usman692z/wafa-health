@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import toast from 'react-hot-toast';
-import { Heart, Mail, Lock, User, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Heart, Mail, Lock, User, Phone, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 import { registerWithEmail, getOrCreateProfile } from '@/lib/auth';
 import { useAuthStore } from '@/store/authStore';
 
@@ -17,6 +17,7 @@ const CITIES = ['Karachi', 'Lahore', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'M
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Enter a valid email address'),
+  phone: z.string().min(10, 'Enter a valid phone number'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
   city: z.string().min(1, 'Select your city'),
@@ -47,6 +48,7 @@ function RegisterPageInner() {
       const profile = await getOrCreateProfile(user, 'patient', {
         name: data.name,
         email: data.email,
+        phone: data.phone,
         city: data.city,
         gender: data.gender,
       } as never);
@@ -101,6 +103,20 @@ function RegisterPageInner() {
                 <input {...register('email')} type="email" placeholder="you@example.com" autoComplete="email" className={`${inputClass} pl-10`} />
               </div>
               {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Phone Number</label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-slate-500 text-sm pointer-events-none">
+                  <span>🇵🇰</span>
+                  <span>+92</span>
+                  <span className="w-px h-4 bg-slate-300 dark:bg-slate-600" />
+                </div>
+                <input {...register('phone')} type="tel" placeholder="3XX XXXXXXX" className={`${inputClass} pl-20`} />
+              </div>
+              {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone.message}</p>}
             </div>
 
             {/* Password */}
