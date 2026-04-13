@@ -113,6 +113,9 @@ function LoginPageInner() {
                 </button>
               </div>
               {errors.password && <p className="mt-1.5 text-xs text-red-500">{errors.password.message}</p>}
+              <div className="text-right mt-1">
+                <Link href="/forgot-password" className="text-xs text-blue-500 hover:underline">Forgot password?</Link>
+              </div>
             </div>
 
             <button
