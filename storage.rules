@@ -7,15 +7,18 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.auth != null
         && request.auth.uid == userId
-        && request.resource.size < 5 * 1024 * 1024  // 5 MB limit
+        && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
 
-    // ─── Chat attachments ──────────────────────────────────────
+    // ─── Chat attachments — only room participants ─────────────
+    // roomId must be in format: {patientId}_{doctorId}
     match /chat/{roomId}/{fileName} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null
+        && roomId.split('_').hasAny([request.auth.uid]);
       allow write: if request.auth != null
-        && request.resource.size < 20 * 1024 * 1024  // 20 MB limit
+        && roomId.split('_').hasAny([request.auth.uid])
+        && request.resource.size < 20 * 1024 * 1024
         && (
           request.resource.contentType.matches('image/.*') ||
           request.resource.contentType.matches('application/pdf') ||
@@ -24,15 +27,17 @@ service firebase.storage {
         );
     }
 
-    // ─── Payment screenshots ───────────────────────────────────
-    match /payments/{fileName} {
-      allow read: if request.auth != null;
+    // ─── Payment screenshots — uploader owns file ─────────────
+    match /payments/{userId}/{fileName} {
+      allow read: if request.auth != null
+        && (request.auth.uid == userId || isAdmin());
       allow write: if request.auth != null
-        && request.resource.size < 10 * 1024 * 1024  // 10 MB limit
+        && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
 
-    // ─── Doctor documents ──────────────────────────────────────
+    // ─── Doctor documents — owner only ────────────────────────
     match /doctor-docs/{userId}/{fileName} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
@@ -44,10 +49,18 @@ service firebase.storage {
         );
     }
 
-    // ─── Prescription PDFs ─────────────────────────────────────
-    match /prescriptions/{fileName} {
+    // ─── Prescription PDFs — doctor writes, patient/doctor reads
+    match /prescriptions/{doctorId}/{fileName} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == doctorId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf');
+    }
+
+    // ─── Deny everything else ──────────────────────────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

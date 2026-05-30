@@ -175,7 +175,11 @@ export default function DoctorAppointmentsPage() {
                   </Link>
                 )}
                 {apt.status === 'completed' && !apt.prescriptionId && (
-                  <Link href={`/doctor/prescriptions/new?appointmentId=${apt.id}&patientId=${apt.patientId}&patientName=${apt.patientName}`} className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-xl text-xs font-medium hover:bg-purple-100 transition-colors">
+                  <Link
+                    href={`/doctor/prescriptions/new?appointmentId=${apt.id}`}
+                    onClick={() => sessionStorage.setItem(`rx_${apt.id}`, JSON.stringify({ patientId: apt.patientId, patientName: apt.patientName }))}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 rounded-xl text-xs font-medium hover:bg-purple-100 transition-colors"
+                  >
                     <FileText className="w-3.5 h-3.5" /> Write Prescription
                   </Link>
                 )}

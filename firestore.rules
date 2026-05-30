@@ -125,15 +125,32 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isAuth() && resource.data.userId == uid());
     }
 
-    // ─── Video Calls (WebRTC signaling) ───────────────────────
+    // ─── Video Calls (WebRTC signaling) — participants only ──────
     match /calls/{callId} {
-      allow read, write: if isAuth() && isNotBlocked();
+      allow read: if isAuth() && isNotBlocked() && (
+        resource.data.patientId == uid() ||
+        resource.data.doctorId == uid() ||
+        isAdmin()
+      );
+      allow create: if isAuth() && isNotBlocked() &&
+        request.resource.data.patientId == uid();
+      allow update: if isAuth() && isNotBlocked() && (
+        resource.data.patientId == uid() ||
+        resource.data.doctorId == uid()
+      );
+      allow delete: if isAdmin();
 
       match /iceCandidates_doctor/{candidateId} {
-        allow read, write: if isAuth() && isNotBlocked();
+        allow read, write: if isAuth() && isNotBlocked() && (
+          get(/databases/$(database)/documents/calls/$(callId)).data.patientId == uid() ||
+          get(/databases/$(database)/documents/calls/$(callId)).data.doctorId == uid()
+        );
       }
       match /iceCandidates_patient/{candidateId} {
-        allow read, write: if isAuth() && isNotBlocked();
+        allow read, write: if isAuth() && isNotBlocked() && (
+          get(/databases/$(database)/documents/calls/$(callId)).data.patientId == uid() ||
+          get(/databases/$(database)/documents/calls/$(callId)).data.doctorId == uid()
+        );
       }
     }
 

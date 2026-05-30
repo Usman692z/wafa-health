@@ -18,8 +18,11 @@ function NewPrescriptionPageInner() {
   const doctor = profile as DoctorProfile;
 
   const appointmentId = searchParams.get('appointmentId') || '';
-  const patientId = searchParams.get('patientId') || '';
-  const patientName = searchParams.get('patientName') || '';
+  const storedRx = typeof window !== 'undefined'
+    ? JSON.parse(sessionStorage.getItem(`rx_${appointmentId}`) || '{}')
+    : {};
+  const patientId: string = storedRx.patientId || '';
+  const patientName: string = storedRx.patientName || '';
 
   const [diagnosis, setDiagnosis] = useState('');
   const [medicines, setMedicines] = useState<Medicine[]>([

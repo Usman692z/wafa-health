@@ -98,7 +98,9 @@ function AdminDoctorsPageInner() {
     }
     setCreateLoading(true);
     try {
-      const tempPassword = Math.random().toString(36).slice(-10) + 'A1!';
+      const arr = new Uint8Array(16);
+      crypto.getRandomValues(arr);
+      const tempPassword = Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, 12) + 'Aa1!';
       const uid = await createDoctorAccount(createForm.email, tempPassword);
       await createUserProfile({
         uid,
