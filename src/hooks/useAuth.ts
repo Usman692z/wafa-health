@@ -33,16 +33,18 @@ export function useRequireAuth(allowedRoles?: UserRole[]) {
   const { profile, isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
+    // allowedRoles undefined means no guard — just observe auth state
+    if (!allowedRoles) return;
     if (!isLoading) {
       if (!isAuthenticated) {
-        if (allowedRoles?.includes('admin')) {
+        if (allowedRoles.includes('admin')) {
           router.push('/admin/login');
         } else {
           router.push('/login');
         }
         return;
       }
-      if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
+      if (profile && !allowedRoles.includes(profile.role)) {
         router.push(`/${profile.role}/dashboard`);
       }
     }
