@@ -2,6 +2,7 @@
 
 import { DashboardLayout } from '@/components/shared/DashboardLayout';
 import { useRequireAuth } from '@/hooks/useAuth';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, Stethoscope, Calendar, DollarSign,
   BarChart2, Settings, FileText, Loader2,
@@ -18,7 +19,12 @@ const navItems = [
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { isLoading } = useRequireAuth(['admin']);
+  const pathname = usePathname();
+  const { isLoading } = useRequireAuth(pathname === '/admin/login' ? undefined : ['admin']);
+
+  if (pathname === '/admin/login') {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

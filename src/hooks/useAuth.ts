@@ -35,7 +35,11 @@ export function useRequireAuth(allowedRoles?: UserRole[]) {
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
-        router.push('/login');
+        if (allowedRoles?.includes('admin')) {
+          router.push('/admin/login');
+        } else {
+          router.push('/login');
+        }
         return;
       }
       if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
